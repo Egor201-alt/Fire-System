@@ -1,0 +1,46 @@
+general:
+  mode: monitor
+  require-version: true
+  leniency: 1.0
+  disabled-worlds: []
+  exempt-gamemodes:
+    - CREATIVE
+    - SPECTATOR
+  join-grace-ticks: 60
+  teleport-grace-ticks: 12
+  velocity-grace-ticks: 12
+  damage-grace-ticks: 4
+  explosion-grace-ticks: 25
+  wind-charge-grace-ticks: 80
+  elytra-boost-grace-ticks: 40
+
+performance:
+  tps-guard: 17.0
+  ping-guard: 600
+
+alerts:
+  default-on: true
+  cooldown-ms: 1500
+  console: true
+  log-to-file: true
+  history-size: 40
+
+heat:
+  enabled: true
+  max: 100
+  decay-per-second: 0.35
+  alert-at: 60
+  actions:
+    - at: 100
+      do:
+        - "kick:<red>Подозрительная активность. Если это ошибка, напишите администрации."
+
+actions:
+  - check: "*"
+    vl: 20
+    do:
+      - "message:<#ff7a00>Fire! <gray>Ваши действия выглядят подозрительно."
+  - check: "*"
+    vl: 40
+    do:
+      - "kick:<red>Обнаружено использование читов."

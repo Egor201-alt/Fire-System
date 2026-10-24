@@ -1,0 +1,45 @@
+name: Fire
+version: 1.0.0
+main: dev.fire.FirePlugin
+api-version: "26.1"
+authors: [Egor201]
+description: Lightweight event-driven anticheat for vanilla private servers
+commands:
+  fire:
+    description: Fire! anticheat command
+    aliases: [firesac]
+permissions:
+  fire.admin:
+    description: All Fire! commands
+    default: op
+    children:
+      fire.alerts: true
+      fire.info: true
+      fire.reset: true
+      fire.reload: true
+      fire.toggle: true
+      fire.watch: true
+      fire.exempt: true
+      fire.debug: true
+      fire.tp: true
+  fire.alerts:
+    default: false
+  fire.info:
+    default: false
+  fire.reset:
+    default: false
+  fire.reload:
+    default: false
+  fire.toggle:
+    default: false
+  fire.watch:
+    default: false
+  fire.exempt:
+    default: false
+  fire.debug:
+    default: false
+  fire.tp:
+    default: false
+  fire.bypass:
+    description: Not checked by Fire!
+    default: false
