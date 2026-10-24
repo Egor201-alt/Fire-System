@@ -16,7 +16,7 @@ alerts-on: '{prefix}<green>Оповещения включены.'
 alerts-off: '{prefix}<gray>Оповещения выключены.'
 reloaded: '{prefix}<green>Конфиги перезагружены.'
 
-status: '{prefix}<gray>Режим: <white>{mode}<newline>{prefix}<gray>TPS: <white>{tps} <gray>MSPT: <white>{mspt} <gray>Лаги: <white>{lagging}<newline>{prefix}<gray>Проверок: <white>{enabled}/{total} <gray>Игроков: <white>{tracked}<newline>{prefix}<gray>Среднее время: движение <white>{move}мкс<gray>, атака <white>{attack}мкс<newline>{prefix}<gray>Нативные коллизии: <white>{native} <gray>Crit API: <white>{crit} <gray>BreakSpeed API: <white>{breakspeed}'
+status: '{prefix}<gray>Режим: <white>{mode}<newline>{prefix}<gray>TPS: <white>{tps} <gray>MSPT: <white>{mspt} <gray>Лаги: <white>{lagging}<newline>{prefix}<gray>Проверок: <white>{enabled}/{total} <gray>Игроков: <white>{tracked}<newline>{prefix}<gray>Среднее время: движение <white>{move}мкс<gray>, атака <white>{attack}мкс<newline>{prefix}<gray>PacketEvents: <white>{packets}'
 
 checks-header: '{prefix}<gray>Проверки:'
 check-on: '<green>✔ <white>{name} <dark_gray>({id}, {category}) <gray>buffer {buffer}'

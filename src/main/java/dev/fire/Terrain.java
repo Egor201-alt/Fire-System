@@ -5,53 +5,17 @@ import org.bukkit.Tag;
 import org.bukkit.World;
 import org.bukkit.util.BoundingBox;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-
 final class Terrain {
-
-    private static final MethodHandle HAS_COLLISIONS = lookup();
 
     private Terrain() {
     }
 
     static boolean nativeCollisions() {
-        return HAS_COLLISIONS != null;
-    }
-
-    private static MethodHandle lookup() {
-        try {
-            return MethodHandles.publicLookup().findVirtual(World.class, "hasCollisionsIn",
-                    MethodType.methodType(boolean.class, BoundingBox.class));
-        } catch (ReflectiveOperationException e) {
-            return null;
-        }
+        return true;
     }
 
     static boolean collides(World w, double minX, double minY, double minZ, double maxX, double maxY, double maxZ) {
-        if (HAS_COLLISIONS != null) {
-            try {
-                return (boolean) HAS_COLLISIONS.invokeExact(w, new BoundingBox(minX, minY, minZ, maxX, maxY, maxZ));
-            } catch (Throwable ignored) {
-            }
-        }
-        int x0 = Util.floor(minX);
-        int x1 = Util.floor(maxX);
-        int y0 = Util.floor(minY);
-        int y1 = Util.floor(maxY);
-        int z0 = Util.floor(minZ);
-        int z1 = Util.floor(maxZ);
-        for (int x = x0; x <= x1; x++) {
-            for (int y = y0; y <= y1; y++) {
-                for (int z = z0; z <= z1; z++) {
-                    if (w.getType(x, y, z).isSolid()) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
+        return w.hasCollisionsIn(new BoundingBox(minX, minY, minZ, maxX, maxY, maxZ));
     }
 
     static double slip(Material t) {

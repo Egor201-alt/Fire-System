@@ -12,7 +12,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +24,7 @@ public final class FirePlugin extends JavaPlugin {
 
     final Move move = new Move();
     final Move scratch = new Move();
-    final Map<UUID, PlayerData> players = new HashMap<>();
+    final Map<UUID, PlayerData> players = new ConcurrentHashMap<>();
     final Set<UUID> alertSet = new HashSet<>();
     final List<Check> checks = new ArrayList<>();
     final Settings settings = new Settings();
@@ -32,6 +32,9 @@ public final class FirePlugin extends JavaPlugin {
     Violations violations;
     YamlConfiguration checksCfg;
     VelocityCheck velocityCheck;
+    PacketBridge packets;
+    volatile int tickNow;
+    boolean moveFlagged;
     Check[] moveChecks = new Check[0];
     Check[] attackChecks = new Check[0];
     Check[] swingChecks = new Check[0];
@@ -40,6 +43,7 @@ public final class FirePlugin extends JavaPlugin {
     Check[] placeChecks = new Check[0];
     Check[] invChecks = new Check[0];
     Check[] tickChecks = new Check[0];
+    Check[] vehicleChecks = new Check[0];
     boolean cancelRequested;
     volatile boolean lagging;
     double tps = 20.0;
@@ -64,11 +68,19 @@ public final class FirePlugin extends JavaPlugin {
         add(new TimerCheck(this));
         add(new AimCheck(this));
         add(new SpeedCheck(this));
+        add(new StrafeCheck(this));
         add(new FlightCheck(this));
+        add(new AirJumpCheck(this));
+        add(new HighJumpCheck(this));
+        add(new StepCheck(this));
         add(new HoverCheck(this));
         add(new GroundCheck(this));
         add(new PhaseCheck(this));
         add(new SprintCheck(this));
+        add(new NoSlowCheck(this));
+        add(new LiquidCheck(this));
+        add(new ClimbCheck(this));
+        add(new VehicleCheck(this));
         add(new ElytraCheck(this));
         velocityCheck = new VelocityCheck(this);
         add(velocityCheck);
@@ -83,8 +95,24 @@ public final class FirePlugin extends JavaPlugin {
         add(new InteractReachCheck(this));
         add(new ScaffoldCheck(this));
         add(new FastPlaceCheck(this));
+        add(new AirPlaceCheck(this));
+        add(new TowerCheck(this));
+        add(new XRayCheck(this));
         add(new InvMoveCheck(this));
+        add(new NoSwingCheck(this));
+        add(new InvSpeedCheck(this));
+        add(new BadPacketsCheck(this));
         reloadAll();
+        if (Bukkit.getPluginManager().isPluginEnabled("packetevents")) {
+            try {
+                packets = PacketsLoader.create(this);
+            } catch (Throwable t) {
+                packets = null;
+                getLogger().log(Level.WARNING, "PacketEvents found but Fire! could not hook into it", t);
+            }
+        } else {
+            getLogger().warning("PacketEvents not found: packet checks (precise Timer, Clicker, NoSwing, InvSpeed, BadPackets) are disabled.");
+        }
         getServer().getPluginManager().registerEvents(new FireListener(this), this);
         FireCommand cmd = new FireCommand(this);
         PluginCommand pc = getCommand("fire");
@@ -93,11 +121,13 @@ public final class FirePlugin extends JavaPlugin {
             pc.setTabCompleter(cmd);
         }
         Bukkit.getScheduler().runTaskTimer(this, this::secondTick, 20L, 20L);
+        Bukkit.getScheduler().runTaskTimer(this, () -> tickNow = Bukkit.getCurrentTick(), 1L, 1L);
         for (Player p : Bukkit.getOnlinePlayers()) {
             PlayerData d = data(p);
             int tick = Bukkit.getCurrentTick();
             d.resetMotion(tick, settings.joinGrace);
             d.joinUntil = tick + settings.joinGrace;
+            d.syncPacket(p, settings);
             Location l = p.getLocation();
             d.markSafe(l.getWorld().getName(), l.getX(), l.getY(), l.getZ(), l.getYaw(), l.getPitch());
             if (settings.alertsDefaultOn && p.hasPermission("fire.alerts")) {
@@ -111,6 +141,10 @@ public final class FirePlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (packets != null) {
+            packets.shutdown();
+            packets = null;
+        }
         if (violations != null) {
             violations.shutdown();
         }
@@ -167,6 +201,7 @@ public final class FirePlugin extends JavaPlugin {
         placeChecks = pick(Check.PLACE);
         invChecks = pick(Check.INV);
         tickChecks = pick(Check.TICK);
+        vehicleChecks = pick(Check.VEHICLE);
     }
 
     private Check[] pick(int mask) {
@@ -222,14 +257,12 @@ public final class FirePlugin extends JavaPlugin {
         mspt = Bukkit.getAverageTickTime();
         lagging = tps < settings.tpsGuard || mspt > 80.0;
         violations.decay();
-        if (tickChecks.length == 0 || lagging) {
-            return;
-        }
         int tick = Bukkit.getCurrentTick();
         for (Player p : Bukkit.getOnlinePlayers()) {
             PlayerData d = data(p);
             d.refresh(p, tick);
-            if (d.globalExempt(p, settings)) {
+            d.syncPacket(p, settings);
+            if (tickChecks.length == 0 || lagging || d.globalExempt(p, settings)) {
                 continue;
             }
             d.moveExempt = d.computeMoveExempt(p, tick);

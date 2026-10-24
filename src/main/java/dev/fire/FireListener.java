@@ -19,6 +19,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.entity.EntityResurrectEvent;
 import org.bukkit.event.entity.EntityToggleGlideEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -26,6 +27,7 @@ import org.bukkit.event.player.PlayerAnimationEvent;
 import org.bukkit.event.player.PlayerAnimationType;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
+import org.bukkit.event.player.PlayerInputEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -36,6 +38,8 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.event.player.PlayerVelocityEvent;
 import org.bukkit.event.vehicle.VehicleExitEvent;
+import org.bukkit.event.vehicle.VehicleMoveEvent;
+import org.bukkit.entity.Vehicle;
 import org.bukkit.util.Vector;
 
 import java.util.Collection;
@@ -69,6 +73,7 @@ final class FireListener implements Listener {
         int tick = Bukkit.getCurrentTick();
         d.resetMotion(tick, plugin.settings.joinGrace);
         d.joinUntil = tick + plugin.settings.joinGrace;
+        d.syncPacket(p, plugin.settings);
         Location l = p.getLocation();
         d.markSafe(l.getWorld().getName(), l.getX(), l.getY(), l.getZ(), l.getYaw(), l.getPitch());
         if (plugin.settings.alertsDefaultOn && p.hasPermission("fire.alerts")) {
@@ -79,6 +84,9 @@ final class FireListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onQuit(PlayerQuitEvent e) {
+        if (plugin.packets != null) {
+            plugin.packets.forget(e.getPlayer().getUniqueId());
+        }
         plugin.players.remove(e.getPlayer().getUniqueId());
         plugin.alertSet.remove(e.getPlayer().getUniqueId());
     }
@@ -142,11 +150,12 @@ final class FireListener implements Listener {
             d.bounceUntil = tick + 60;
         }
         plugin.cancelRequested = false;
+        plugin.moveFlagged = false;
         for (Check c : plugin.moveChecks) {
             c.move(p, d, m);
         }
-        boolean flagged = plugin.cancelRequested;
-        if (flagged && plugin.settings.enforce && m.moved) {
+        boolean flagged = plugin.cancelRequested || plugin.moveFlagged;
+        if (plugin.cancelRequested && plugin.settings.enforce && m.moved) {
             e.setCancelled(true);
             plugin.moveNanos += System.nanoTime() - t0;
             plugin.moveCount++;
@@ -302,6 +311,7 @@ final class FireListener implements Listener {
         if (d != null) {
             d.flyUntil = Bukkit.getCurrentTick() + 60;
             d.resetMotion(Bukkit.getCurrentTick(), 20);
+            d.syncPacket(e.getPlayer(), plugin.settings);
         }
     }
 
@@ -426,6 +436,51 @@ final class FireListener implements Listener {
         }
         if (plugin.cancelRequested && plugin.settings.enforce) {
             e.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onInput(PlayerInputEvent e) {
+        PlayerData d = plugin.players.get(e.getPlayer().getUniqueId());
+        if (d == null) {
+            return;
+        }
+        org.bukkit.Input in = e.getInput();
+        d.inForward = in.isForward();
+        d.inBackward = in.isBackward();
+        d.inLeft = in.isLeft();
+        d.inRight = in.isRight();
+        d.inJump = in.isJump();
+        d.inSneak = in.isSneak();
+        d.inSprint = in.isSprint();
+        d.inputTick = Bukkit.getCurrentTick();
+        d.inputKnown = true;
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onResurrect(EntityResurrectEvent e) {
+        if (e.getEntity() instanceof Player p && plugin.packets != null) {
+            plugin.packets.pop(p.getUniqueId());
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onVehicleMove(VehicleMoveEvent e) {
+        if (plugin.vehicleChecks.length == 0) {
+            return;
+        }
+        Vehicle v = e.getVehicle();
+        for (Entity passenger : v.getPassengers()) {
+            if (passenger instanceof Player p) {
+                PlayerData d = plugin.data(p);
+                if (d.globalExempt(p, plugin.settings)) {
+                    return;
+                }
+                for (Check c : plugin.vehicleChecks) {
+                    c.vehicle(p, d, v, e.getFrom(), e.getTo());
+                }
+                return;
+            }
         }
     }
 }

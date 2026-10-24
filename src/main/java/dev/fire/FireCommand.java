@@ -166,9 +166,7 @@ final class FireCommand implements TabExecutor {
                 "tracked", String.valueOf(plugin.players.size()),
                 "move", Util.f(avgMove),
                 "attack", Util.f(avgAttack),
-                "native", Terrain.nativeCollisions() ? "да" : "нет",
-                "crit", Compat.hasCritical() ? "да" : "нет",
-                "breakspeed", Compat.hasBreakSpeed() ? "да" : "нет");
+                "packets", plugin.packets != null ? "да" : "нет");
     }
 
     private void checks(CommandSender sender) {
@@ -295,12 +293,14 @@ final class FireCommand implements TabExecutor {
         PlayerData d = plugin.data(t);
         if (args.length < 3 || args[2].equalsIgnoreCase("off")) {
             d.exemptUntilMs = 0;
+            d.syncPacket(t, plugin.settings);
             plugin.messages.send(sender, "exempt-off", "player", t.getName());
             return;
         }
         try {
             long minutes = Math.max(1, Long.parseLong(args[2]));
             d.exemptUntilMs = System.currentTimeMillis() + minutes * 60_000L;
+            d.syncPacket(t, plugin.settings);
             plugin.messages.send(sender, "exempt-on", "player", t.getName(), "minutes", String.valueOf(minutes));
         } catch (NumberFormatException e) {
             plugin.messages.send(sender, "usage");

@@ -44,6 +44,7 @@ final class Violations {
         double before = d.vl[i];
         double after = before + c.vl;
         d.vl[i] = after;
+        plugin.moveFlagged = true;
         double heatBefore = d.heat;
         if (s.heatEnabled) {
             d.heat = Math.min(s.heatMax, d.heat + c.heat * c.vl);

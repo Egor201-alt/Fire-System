@@ -33,8 +33,19 @@ final class PlayerData {
     boolean groundServer = true;
     int airTicks;
     int lastMoveTick;
-    int joinUntil, teleportUntil, velocityUntil, specialUntil, bounceUntil;
-    int glideUntil, boostUntil, vehicleUntil, riptideUntil, flyUntil;
+    volatile int joinUntil, teleportUntil, velocityUntil, glideUntil, boostUntil, riptideUntil;
+    int specialUntil, bounceUntil, vehicleUntil, flyUntil;
+    volatile boolean pktExempt;
+    volatile boolean pktAllowFlight;
+
+    boolean inputKnown;
+    boolean inForward, inBackward, inLeft, inRight, inJump, inSneak, inSprint;
+    int inputTick;
+
+    int noSlowCount, liquidCount, vehicleAir, elytraHover, antiHunger, strafeCount, xrayStone, xrayHidden;
+    int towerStart, towerCount;
+    double towerY0;
+    boolean flaggedMove;
     boolean moveExempt;
 
     boolean hasSafe;
@@ -94,6 +105,15 @@ final class PlayerData {
             return true;
         }
         return !s.disabledWorlds.isEmpty() && s.disabledWorlds.contains(p.getWorld().getName());
+    }
+
+    void syncPacket(Player p, Settings s) {
+        pktExempt = globalExempt(p, s);
+        pktAllowFlight = p.getAllowFlight();
+    }
+
+    int graceUntil() {
+        return Math.max(Math.max(joinUntil, teleportUntil), Math.max(Math.max(velocityUntil, glideUntil), Math.max(boostUntil, riptideUntil)));
     }
 
     void refresh(Player p, int tick) {

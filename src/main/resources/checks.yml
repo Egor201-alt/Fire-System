@@ -2,21 +2,21 @@ timer:
   enabled: true
   alert: true
   cancel: true
-  vl: 1.0
+  vl: 1
   decay: 1.0
   heat: 1.5
-  buffer: 3.0
-  threshold-ms: 90.0
-  max-bank-ms: 800.0
+  buffer: 2.5
+  threshold-ms: 60.0
+  max-bank-ms: 350.0
 
 aim:
   enabled: true
   alert: true
   cancel: false
-  vl: 1.0
+  vl: 1
   decay: 1.0
-  heat: 1.0
-  buffer: 4.0
+  heat: 1
+  buffer: 3.0
   spin-degrees: 60.0
   spin-ticks: 8
   robotic-ticks: 6
@@ -25,30 +25,69 @@ speed:
   enabled: true
   alert: true
   cancel: true
-  vl: 1.0
+  vl: 1
   decay: 1.0
-  heat: 1.0
-  buffer: 5.0
-  tolerance: 0.04
+  heat: 1
+  buffer: 4.0
+  tolerance: 0.03
   jump-boost: 0.2
+
+strafe:
+  enabled: true
+  alert: true
+  cancel: true
+  vl: 1
+  decay: 1.0
+  heat: 1
+  buffer: 4.0
+  tolerance: 0.03
 
 flight:
   enabled: true
   alert: true
   cancel: true
-  vl: 1.0
+  vl: 1
   decay: 1.0
   heat: 1.2
-  buffer: 3.0
-  tolerance: 0.03
+  buffer: 2.5
+  tolerance: 0.02
+
+airjump:
+  enabled: true
+  alert: true
+  cancel: true
+  vl: 2
+  decay: 1.0
+  heat: 1.5
+  buffer: 1.5
+
+highjump:
+  enabled: true
+  alert: true
+  cancel: true
+  vl: 2
+  decay: 1.0
+  heat: 1.5
+  buffer: 1.5
+  tolerance: 0.02
+
+step:
+  enabled: true
+  alert: true
+  cancel: true
+  vl: 1.5
+  decay: 1.0
+  heat: 1.2
+  buffer: 1.5
+  tolerance: 0.02
 
 hover:
   enabled: true
   alert: true
   cancel: false
-  vl: 1.0
+  vl: 1
   decay: 1.0
-  heat: 1.0
+  heat: 1
   buffer: 2.0
   idle-ticks: 30
   ground-distance: 0.5
@@ -57,17 +96,18 @@ ground:
   enabled: true
   alert: true
   cancel: true
-  vl: 1.0
+  vl: 1
   decay: 1.0
-  heat: 1.0
-  buffer: 3.0
-  distance: 0.45
+  heat: 1
+  buffer: 2.5
+  distance: 0.4
+  antihunger-ticks: 10
 
 phase:
   enabled: true
   alert: true
   cancel: true
-  vl: 2.0
+  vl: 2
   decay: 1.0
   heat: 1.5
   buffer: 2.0
@@ -77,32 +117,79 @@ sprint:
   enabled: true
   alert: true
   cancel: true
-  vl: 1.0
+  vl: 1
   decay: 1.0
-  heat: 1.0
-  buffer: 6.0
-  min-speed: 0.22
-  max-angle: 110.0
+  heat: 1
+  buffer: 4.0
+  min-speed: 0.2
+  max-angle: 100.0
+  no-key-ticks: 4
+
+noslow:
+  enabled: true
+  alert: true
+  cancel: true
+  vl: 1
+  decay: 1.0
+  heat: 1
+  buffer: 3.0
+  tolerance: 0.02
+  min-use-ticks: 3
+
+liquid:
+  enabled: true
+  alert: true
+  cancel: true
+  vl: 1
+  decay: 1.0
+  heat: 1
+  buffer: 3.0
+  max-speed: 0.45
+  hover-ticks: 8
+
+climb:
+  enabled: true
+  alert: true
+  cancel: true
+  vl: 1
+  decay: 1.0
+  heat: 1
+  buffer: 3.0
+  max-up: 0.215
+
+vehicle:
+  enabled: true
+  alert: true
+  cancel: true
+  vl: 1
+  decay: 1.0
+  heat: 1
+  buffer: 3.0
+  boat-max-speed: 4.0
+  minecart-max-speed: 0.7
+  mount-max-speed: 1.5
+  boat-air-ticks: 8
 
 elytra:
   enabled: true
   alert: true
   cancel: true
-  vl: 1.0
+  vl: 1
   decay: 1.0
-  heat: 1.0
-  buffer: 3.0
-  max-speed: 4.2
+  heat: 1
+  buffer: 2.5
+  max-speed: 3.8
+  hover-ticks: 10
 
 velocity:
   enabled: true
   alert: true
   cancel: false
-  vl: 1.0
+  vl: 1
   decay: 1.0
-  heat: 1.0
+  heat: 1
   buffer: 3.0
-  ratio: 0.15
+  ratio: 0.25
   window-ticks: 5
   min-velocity: 0.25
 
@@ -110,11 +197,11 @@ reach:
   enabled: true
   alert: true
   cancel: true
-  vl: 1.0
+  vl: 1
   decay: 1.0
   heat: 1.5
-  buffer: 4.0
-  tolerance: 0.35
+  buffer: 3.0
+  tolerance: 0.3
   ping-compensation: 0.002
   max-ping: 300
 
@@ -122,11 +209,11 @@ hitbox:
   enabled: true
   alert: true
   cancel: true
-  vl: 1.0
+  vl: 1
   decay: 1.0
   heat: 1.5
-  buffer: 4.0
-  expand: 0.35
+  buffer: 3.0
+  expand: 0.3
   ping-compensation: 0.0015
   max-ping: 300
 
@@ -134,9 +221,9 @@ multiaura:
   enabled: true
   alert: true
   cancel: true
-  vl: 2.0
+  vl: 2
   decay: 1.0
-  heat: 2.0
+  heat: 2
   buffer: 2.0
   targets: 3
   window-ticks: 4
@@ -145,90 +232,157 @@ clicker:
   enabled: true
   alert: true
   cancel: false
-  vl: 1.0
+  vl: 1
   decay: 1.0
-  heat: 1.0
-  buffer: 3.0
-  max-cps: 22.0
-  pattern-deviation-ms: 3.5
-  pattern-samples: 40
-  pattern-max-interval-ms: 140.0
+  heat: 1
+  buffer: 2.5
+  max-cps: 20.0
+  pattern-deviation-ms: 4.0
+  pattern-samples: 30
+  pattern-max-interval-ms: 150.0
 
 criticals:
   enabled: true
   alert: true
   cancel: true
-  vl: 1.0
+  vl: 1
   decay: 1.0
   heat: 1.5
-  buffer: 3.0
+  buffer: 2.5
+
+noswing:
+  enabled: true
+  alert: true
+  cancel: false
+  vl: 1
+  decay: 1.0
+  heat: 1.5
+  buffer: 2.0
+  grace-ms: 120.0
 
 fastbreak:
   enabled: true
   alert: true
   cancel: true
-  vl: 1.0
+  vl: 1
   decay: 1.0
-  heat: 1.0
-  buffer: 3.0
-  ratio: 0.6
-  slack-ticks: 1.5
+  heat: 1
+  buffer: 2.5
+  ratio: 0.65
+  slack-ticks: 1.0
 
 nuker:
   enabled: true
   alert: true
   cancel: true
-  vl: 1.0
+  vl: 1
   decay: 1.0
-  heat: 1.0
+  heat: 1
   buffer: 2.0
-  max-per-second: 18
+  max-per-second: 16
 
 blockvisible:
   enabled: true
   alert: true
   cancel: true
-  vl: 1.0
+  vl: 1
   decay: 1.0
-  heat: 1.0
-  buffer: 3.0
+  heat: 1
+  buffer: 2.5
 
 interactreach:
   enabled: true
   alert: true
   cancel: true
-  vl: 1.0
+  vl: 1
   decay: 1.0
-  heat: 1.0
-  buffer: 3.0
-  tolerance: 1.0
+  heat: 1
+  buffer: 2.5
+  tolerance: 0.8
 
 scaffold:
   enabled: true
   alert: true
   cancel: true
-  vl: 1.0
+  vl: 1
   decay: 1.0
-  heat: 1.0
-  buffer: 5.0
-  expand: 0.3
+  heat: 1
+  buffer: 4.0
+  expand: 0.25
 
 fastplace:
   enabled: true
   alert: true
   cancel: true
-  vl: 1.0
+  vl: 1
   decay: 1.0
-  heat: 1.0
-  buffer: 3.0
-  max-per-second: 18
+  heat: 1
+  buffer: 2.5
+  max-per-second: 16
+
+airplace:
+  enabled: true
+  alert: true
+  cancel: true
+  vl: 2
+  decay: 1.0
+  heat: 1.5
+  buffer: 1.5
+
+tower:
+  enabled: true
+  alert: true
+  cancel: true
+  vl: 1
+  decay: 1.0
+  heat: 1
+  buffer: 2.0
+  max-blocks-per-second: 2.6
+  min-blocks: 5
+
+xray:
+  enabled: true
+  alert: true
+  cancel: false
+  vl: 3
+  decay: 1.0
+  heat: 1.5
+  buffer: 1.0
+  min-stone: 120
+  min-hidden-ores: 4
+  max-ratio: 0.03
 
 invmove:
   enabled: true
   alert: true
   cancel: true
-  vl: 1.0
+  vl: 1
   decay: 1.0
-  heat: 1.0
-  buffer: 3.0
-  min-speed: 0.18
+  heat: 1
+  buffer: 2.5
+  min-speed: 0.16
+
+invspeed:
+  enabled: true
+  alert: true
+  cancel: false
+  vl: 1
+  decay: 1.0
+  heat: 1.5
+  buffer: 2.0
+  max-clicks-per-second: 16
+  pattern-deviation-ms: 3.0
+  pattern-max-interval-ms: 110.0
+  totem-reaction-ms: 100.0
+
+badpackets:
+  enabled: true
+  alert: true
+  cancel: true
+  vl: 2
+  decay: 1.0
+  heat: 1.5
+  buffer: 1.0
+  max-position-delta: 8.0
+  cursor-tolerance: 0.01
+  max-sprint-toggles-per-second: 30

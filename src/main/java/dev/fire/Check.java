@@ -3,6 +3,7 @@ package dev.fire;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Entity;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockDamageEvent;
@@ -20,6 +21,7 @@ abstract class Check {
     static final int PLACE = 32;
     static final int INV = 64;
     static final int TICK = 128;
+    static final int VEHICLE = 256;
 
     final FirePlugin plugin;
     final String id;
@@ -85,6 +87,9 @@ abstract class Check {
     void tick(Player p, PlayerData d) {
     }
 
+    void vehicle(Player p, PlayerData d, Entity vehicle, Location from, Location to) {
+    }
+
     final boolean raise(PlayerData d, double amount) {
         double b = d.buf[index] + amount * (d.watch ? 1.5 : 1.0);
         if (b >= buffer) {
@@ -93,6 +98,21 @@ abstract class Check {
         }
         d.buf[index] = b;
         return false;
+    }
+
+    final boolean raiseP(PacketData pd, double amount) {
+        double b = pd.buf[index] + amount;
+        if (b >= buffer) {
+            pd.buf[index] = buffer * 0.5;
+            return true;
+        }
+        pd.buf[index] = b;
+        return false;
+    }
+
+    final void lowerP(PacketData pd, double amount) {
+        double b = pd.buf[index] - amount;
+        pd.buf[index] = b < 0 ? 0 : b;
     }
 
     final void lower(PlayerData d, double amount) {

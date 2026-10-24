@@ -1,8 +1,9 @@
 name: Fire
-version: 1.0.0
+version: 1.1.0
 main: dev.fire.FirePlugin
 api-version: "26.1"
 authors: [Egor201]
+softdepend: [packetevents]
 description: Lightweight event-driven anticheat for vanilla private servers
 commands:
   fire:

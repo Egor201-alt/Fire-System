@@ -48,7 +48,7 @@ final class FastBreakCheck extends Check {
 
     @Override
     void blockBreak(Player p, PlayerData d, Block b, BlockBreakEvent e) {
-        if (!Compat.hasBreakSpeed() || p.getGameMode() == GameMode.CREATIVE) {
+        if (p.getGameMode() == GameMode.CREATIVE) {
             return;
         }
         float speed = Compat.breakSpeed(b, p);

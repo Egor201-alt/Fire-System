@@ -3,6 +3,8 @@ package dev.fire;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.Player;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.BoundingBox;
 
 import java.util.Locale;
@@ -15,6 +17,15 @@ final class Util {
     static double attr(Player p, Attribute a, double def) {
         AttributeInstance i = p.getAttribute(a);
         return i == null ? def : i.getValue();
+    }
+
+    static double jumpPower(Player p) {
+        double j = attr(p, Attribute.JUMP_STRENGTH, 0.42);
+        PotionEffect boost = p.getPotionEffect(PotionEffectType.JUMP_BOOST);
+        if (boost != null) {
+            j += 0.1 * (boost.getAmplifier() + 1);
+        }
+        return j;
     }
 
     static int floor(double v) {

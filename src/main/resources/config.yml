@@ -1,7 +1,7 @@
 general:
-  mode: monitor
+  mode: enforce
   require-version: true
-  leniency: 1.0
+  leniency: 0.9
   disabled-worlds: []
   exempt-gamemodes:
     - CREATIVE
@@ -29,18 +29,18 @@ heat:
   enabled: true
   max: 100
   decay-per-second: 0.35
-  alert-at: 60
+  alert-at: 50
   actions:
-    - at: 100
+    - at: 80
       do:
         - "kick:<red>Подозрительная активность. Если это ошибка, напишите администрации."
 
 actions:
   - check: "*"
-    vl: 20
+    vl: 8
     do:
       - "message:<#ff7a00>Fire! <gray>Ваши действия выглядят подозрительно."
   - check: "*"
-    vl: 40
+    vl: 18
     do:
       - "kick:<red>Обнаружено использование читов."

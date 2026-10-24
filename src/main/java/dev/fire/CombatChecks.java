@@ -149,21 +149,62 @@ final class ClickerCheck extends Check {
 
     @Override
     double defaultBuffer() {
-        return 3.0;
+        return 2.5;
     }
 
     @Override
     void configure(ConfigurationSection s) {
-        maxCps = s.getDouble("max-cps", 22.0);
-        deviation = s.getDouble("pattern-deviation-ms", 3.5);
-        samples = Math.min(46, Math.max(10, s.getInt("pattern-samples", 40)));
-        maxInterval = s.getDouble("pattern-max-interval-ms", 140.0);
+        maxCps = s.getDouble("max-cps", 20.0);
+        deviation = s.getDouble("pattern-deviation-ms", 4.0);
+        samples = Math.min(46, Math.max(10, s.getInt("pattern-samples", 30)));
+        maxInterval = s.getDouble("pattern-max-interval-ms", 150.0);
+    }
+
+    String analyze(long[] clicks, int idx, int count, long now) {
+        int len = clicks.length;
+        int cps = 0;
+        for (int i = 0; i < count; i++) {
+            if (now - clicks[i] <= 1_000_000_000L) {
+                cps++;
+            }
+        }
+        if (cps > maxCps) {
+            return "cps=" + cps;
+        }
+        if (count < samples) {
+            return null;
+        }
+        double sum = 0;
+        double sumSq = 0;
+        int n = samples - 1;
+        int cur = (idx - 1 + len) % len;
+        long prev = clicks[cur];
+        for (int k = 0; k < n; k++) {
+            cur = (cur - 1 + len) % len;
+            double iv = (prev - clicks[cur]) / 1_000_000.0;
+            if (iv > 1000 || iv < 0) {
+                return null;
+            }
+            sum += iv;
+            sumSq += iv * iv;
+            prev = clicks[cur];
+        }
+        double mean = sum / n;
+        double sd = Math.sqrt(Math.max(0.0, sumSq / n - mean * mean));
+        if (mean < maxInterval && sd < deviation) {
+            return "pattern sd=" + Util.f(sd) + "ms avg=" + Util.f(mean) + "ms";
+        }
+        return null;
     }
 
     @Override
     void swing(Player p, PlayerData d) {
-        long now = System.currentTimeMillis();
-        if (d.mining && now - d.miningSince < 15000L) {
+        if (plugin.packets != null) {
+            return;
+        }
+        long now = System.nanoTime();
+        long ms = System.currentTimeMillis();
+        if (d.mining && ms - d.miningSince < 15000L) {
             return;
         }
         int len = d.clicks.length;
@@ -172,51 +213,31 @@ final class ClickerCheck extends Check {
         if (d.clickCount < len) {
             d.clickCount++;
         }
-        int cps = 0;
-        for (int i = 0; i < d.clickCount; i++) {
-            if (now - d.clicks[i] <= 1000L) {
-                cps++;
-            }
-        }
-        if (cps > maxCps) {
+        String detail = analyze(d.clicks, d.clickIdx, d.clickCount, now);
+        if (detail != null) {
             if (raise(d, 1.0)) {
-                flag(p, d, "cps=" + cps);
-            }
-            return;
-        }
-        if (d.clickCount < samples) {
-            return;
-        }
-        double sum = 0;
-        double sumSq = 0;
-        int n = samples - 1;
-        int idx = (d.clickIdx - 1 + len) % len;
-        long prev = d.clicks[idx];
-        for (int k = 0; k < n; k++) {
-            idx = (idx - 1 + len) % len;
-            long cur = d.clicks[idx];
-            double iv = prev - cur;
-            if (iv > 1000 || iv < 0) {
-                lower(d, 0.2);
-                return;
-            }
-            sum += iv;
-            sumSq += iv * iv;
-            prev = cur;
-        }
-        double mean = sum / n;
-        double var = Math.max(0.0, sumSq / n - mean * mean);
-        double sd = Math.sqrt(var);
-        if (mean < maxInterval && sd < deviation) {
-            if (raise(d, 1.0)) {
-                flag(p, d, "pattern sd=" + Util.f(sd) + "ms avg=" + Util.f(mean) + "ms");
+                flag(p, d, detail);
             }
         } else {
             lower(d, 0.1);
         }
     }
-}
 
+    String packet(PacketData pd, long now) {
+        int len = pd.clicks.length;
+        pd.clicks[pd.clickIdx] = now;
+        pd.clickIdx = (pd.clickIdx + 1) % len;
+        if (pd.clickCount < len) {
+            pd.clickCount++;
+        }
+        String detail = analyze(pd.clicks, pd.clickIdx, pd.clickCount, now);
+        if (detail != null) {
+            return raiseP(pd, 1.0) ? detail : null;
+        }
+        lowerP(pd, 0.1);
+        return null;
+    }
+}
 final class CriticalsCheck extends Check {
 
     CriticalsCheck(FirePlugin plugin) {

@@ -78,17 +78,17 @@ final class FlightCheck extends Check {
 
     @Override
     double defaultBuffer() {
-        return 3.0;
+        return 2.5;
     }
 
     @Override
     void configure(ConfigurationSection s) {
-        tolerance = s.getDouble("tolerance", 0.03);
+        tolerance = s.getDouble("tolerance", 0.02);
     }
 
     @Override
     void move(Player p, PlayerData d, Move m) {
-        if (!m.moved || !d.hasLast || d.moveExempt || m.unloaded || m.special()) {
+        if (!m.moved || !d.hasLast || d.moveExempt || m.unloaded || m.special() || d.groundServer) {
             return;
         }
         if (m.tick < d.velocityUntil || m.tick < d.specialUntil || m.tick < d.bounceUntil) {
@@ -97,24 +97,15 @@ final class FlightCheck extends Check {
         if (p.hasPotionEffect(PotionEffectType.LEVITATION)) {
             return;
         }
-        double tol = tolerance * len();
-        double max;
-        if (d.groundServer) {
-            double jump = Util.attr(p, Attribute.JUMP_STRENGTH, 0.42);
-            PotionEffect boost = p.getPotionEffect(PotionEffectType.JUMP_BOOST);
-            if (boost != null) {
-                jump += 0.1 * (boost.getAmplifier() + 1);
-            }
-            double step = Util.attr(p, Attribute.STEP_HEIGHT, 0.6);
-            max = Math.max(jump, step) + tol;
-        } else {
-            double gravity = Util.attr(p, Attribute.GRAVITY, 0.08);
-            max = (d.lastDy - gravity) * 0.98 + tol;
-        }
+        double gravity = Util.attr(p, Attribute.GRAVITY, 0.08);
+        double max = (d.lastDy - gravity) * 0.98 + tolerance * len();
         if (debugging(d)) {
             p.sendActionBar(Component.text("flight dy=" + Util.f3(m.dy) + " max=" + Util.f3(max)));
         }
         if (m.dy > max) {
+            if (Math.abs(m.dy - Util.jumpPower(p)) < AirJumpCheck.WINDOW) {
+                return;
+            }
             if (raise(d, 1.0)) {
                 flag(p, d, "dy=" + Util.f3(m.dy) + " max=" + Util.f3(max));
             }
@@ -178,6 +169,7 @@ final class HoverCheck extends Check {
 final class GroundCheck extends Check {
 
     private double distance;
+    private int antiHungerTicks;
 
     GroundCheck(FirePlugin plugin) {
         super(plugin, "ground", "Ground", "movement", MOVE);
@@ -185,12 +177,13 @@ final class GroundCheck extends Check {
 
     @Override
     double defaultBuffer() {
-        return 3.0;
+        return 2.5;
     }
 
     @Override
     void configure(ConfigurationSection s) {
-        distance = s.getDouble("distance", 0.45);
+        distance = s.getDouble("distance", 0.4);
+        antiHungerTicks = s.getInt("antihunger-ticks", 10);
     }
 
     @Override
@@ -210,6 +203,16 @@ final class GroundCheck extends Check {
                 return;
             }
         }
+        if (!m.clientGround && m.ground && d.groundServer && Math.abs(m.dy) < 1.0E-9 && m.h > 0.05) {
+            if (++d.antiHunger >= antiHungerTicks) {
+                d.antiHunger = 0;
+                if (raise(d, 1.0)) {
+                    flag(p, d, "client=air on flat ground (AntiHunger)");
+                }
+            }
+            return;
+        }
+        d.antiHunger = Math.max(0, d.antiHunger - 1);
         lower(d, 0.5);
     }
 }
@@ -225,17 +228,20 @@ final class TimerCheck extends Check {
 
     @Override
     double defaultBuffer() {
-        return 3.0;
+        return 2.5;
     }
 
     @Override
     void configure(ConfigurationSection s) {
-        threshold = s.getDouble("threshold-ms", 90.0);
-        maxBank = s.getDouble("max-bank-ms", 800.0);
+        threshold = s.getDouble("threshold-ms", 60.0);
+        maxBank = s.getDouble("max-bank-ms", 350.0);
     }
 
     @Override
     void move(Player p, PlayerData d, Move m) {
+        if (plugin.packets != null) {
+            return;
+        }
         long now = System.nanoTime();
         long last = d.timerLast;
         d.timerLast = now;
@@ -243,8 +249,7 @@ final class TimerCheck extends Check {
             d.timerBalance = 0;
             return;
         }
-        double delta = (now - last) / 1_000_000.0;
-        double bal = d.timerBalance + 50.0 - delta;
+        double bal = d.timerBalance + 50.0 - (now - last) / 1_000_000.0;
         if (bal < -maxBank) {
             bal = -maxBank;
         }
@@ -257,6 +262,30 @@ final class TimerCheck extends Check {
             lower(d, 0.02);
         }
         d.timerBalance = bal;
+    }
+
+    String packet(PacketData pd, long now, boolean skip) {
+        long last = pd.timerLast;
+        pd.timerLast = now;
+        if (last == 0 || skip) {
+            pd.timerBalance = 0;
+            return null;
+        }
+        double bal = pd.timerBalance + 50.0 - (now - last) / 1_000_000.0;
+        if (bal < -maxBank) {
+            bal = -maxBank;
+        }
+        String out = null;
+        if (bal > threshold * len()) {
+            if (raiseP(pd, 1.0)) {
+                out = "ahead=" + Util.f(bal) + "ms";
+            }
+            bal = 0;
+        } else {
+            lowerP(pd, 0.02);
+        }
+        pd.timerBalance = bal;
+        return out;
     }
 }
 
@@ -311,6 +340,7 @@ final class SprintCheck extends Check {
 
     private double minSpeed;
     private double angle;
+    private int noKeyTicks;
 
     SprintCheck(FirePlugin plugin) {
         super(plugin, "sprint", "Sprint", "movement", MOVE);
@@ -318,13 +348,14 @@ final class SprintCheck extends Check {
 
     @Override
     double defaultBuffer() {
-        return 6.0;
+        return 4.0;
     }
 
     @Override
     void configure(ConfigurationSection s) {
-        minSpeed = s.getDouble("min-speed", 0.22);
-        angle = s.getDouble("max-angle", 110.0);
+        minSpeed = s.getDouble("min-speed", 0.2);
+        angle = s.getDouble("max-angle", 100.0);
+        noKeyTicks = s.getInt("no-key-ticks", 4);
     }
 
     @Override
@@ -332,16 +363,24 @@ final class SprintCheck extends Check {
         if (!m.moved || !d.hasLast || d.moveExempt || m.unloaded || m.special()) {
             return;
         }
-        if (!p.isSprinting() || !m.ground || !d.groundServer || m.h < minSpeed || d.lastSlip > 0.61
-                || m.tick < d.velocityUntil || m.tick < d.specialUntil) {
+        if (!p.isSprinting() || m.h < minSpeed || d.lastSlip > 0.61 || m.tick < d.velocityUntil || m.tick < d.specialUntil) {
             lower(d, 0.5);
             return;
         }
-        double moveYaw = Math.toDegrees(Math.atan2(-m.dx, m.dz));
-        double diff = Math.abs(Util.wrapDegrees((float) (moveYaw - m.yaw)));
-        if (diff > angle && m.h >= d.lastH * 0.9) {
+        boolean bad;
+        String detail;
+        if (d.inputKnown) {
+            bad = !d.inForward && m.tick - d.inputTick >= noKeyTicks;
+            detail = "sprint without forward key h=" + Util.f3(m.h);
+        } else {
+            double moveYaw = Math.toDegrees(Math.atan2(-m.dx, m.dz));
+            double diff = Math.abs(Util.wrapDegrees((float) (moveYaw - m.yaw)));
+            bad = m.ground && d.groundServer && diff > angle && m.h >= d.lastH * 0.9;
+            detail = "angle=" + Util.f(diff) + " h=" + Util.f3(m.h);
+        }
+        if (bad) {
             if (raise(d, 1.0)) {
-                flag(p, d, "angle=" + Util.f(diff) + " h=" + Util.f3(m.h));
+                flag(p, d, detail);
             }
         } else {
             lower(d, 0.5);
@@ -352,6 +391,7 @@ final class SprintCheck extends Check {
 final class ElytraCheck extends Check {
 
     private double maxSpeed;
+    private int hoverTicks;
 
     ElytraCheck(FirePlugin plugin) {
         super(plugin, "elytra", "Elytra", "movement", MOVE);
@@ -359,17 +399,19 @@ final class ElytraCheck extends Check {
 
     @Override
     double defaultBuffer() {
-        return 3.0;
+        return 2.5;
     }
 
     @Override
     void configure(ConfigurationSection s) {
-        maxSpeed = s.getDouble("max-speed", 4.2);
+        maxSpeed = s.getDouble("max-speed", 3.8);
+        hoverTicks = s.getInt("hover-ticks", 10);
     }
 
     @Override
     void move(Player p, PlayerData d, Move m) {
         if (!m.moved || !p.isGliding() || m.tick < d.boostUntil || m.tick < d.velocityUntil || m.tick < d.teleportUntil) {
+            d.elytraHover = 0;
             return;
         }
         double speed = Math.sqrt(m.dx * m.dx + m.dy * m.dy + m.dz * m.dz);
@@ -377,7 +419,17 @@ final class ElytraCheck extends Check {
             if (raise(d, 1.0)) {
                 flag(p, d, "speed=" + Util.f(speed) + " max=" + Util.f(maxSpeed));
             }
+            return;
+        }
+        if (speed < 0.12 && Math.abs(m.dy) < 0.06) {
+            if (++d.elytraHover >= hoverTicks) {
+                d.elytraHover = 0;
+                if (raise(d, 1.0)) {
+                    flag(p, d, "hovering while gliding");
+                }
+            }
         } else {
+            d.elytraHover = Math.max(0, d.elytraHover - 1);
             lower(d, 0.25);
         }
     }
